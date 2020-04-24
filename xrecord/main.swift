@@ -165,7 +165,7 @@ if outFile.value != nil && FileManager.default.fileExists(atPath: outFile.value!
 // Start a real capture
 if !done {
   NSLog("Starting capture....")
-  capture.start(outFile.value)
+  capture.startRaw(outFile.value)
 
   let start = Date()
   if time.value != nil && time.value > 0 {

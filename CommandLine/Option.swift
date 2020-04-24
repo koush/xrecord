@@ -36,7 +36,7 @@ open class Option {
   }
   
   public init(shortFlag: String, longFlag: String, required: Bool, helpMessage: String) {
-    assert(shortFlag.characters.count == 1, "Short flag must be a single character")
+    assert(shortFlag.count == 1, "Short flag must be a single character")
     assert(Int(shortFlag) == nil && shortFlag.toDouble() == nil, "Short flag cannot be a numeric value")
     assert(Int(longFlag) == nil && longFlag.toDouble() == nil, "Long flag cannot be a numeric value")
     

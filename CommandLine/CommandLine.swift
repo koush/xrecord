@@ -155,8 +155,8 @@ open class CommandLine {
       /* Swift strings don't have substringFromIndex(). Do a little dance instead. */
       var flag = ""
       var skipChars =
-        arg.hasPrefix(LongOptionPrefix) ? LongOptionPrefix.characters.count : ShortOptionPrefix.characters.count
-      for c in arg.characters {
+        arg.hasPrefix(LongOptionPrefix) ? LongOptionPrefix.count : ShortOptionPrefix.count
+      for c in arg {
         if skipChars > 0 {
           skipChars -= 1
           continue
@@ -183,8 +183,8 @@ open class CommandLine {
       
       /* Flags that do not take any arguments can be concatenated */
       if !flagMatched && !arg.hasPrefix(LongOptionPrefix) {
-        for (i, c) in flag.characters.enumerated() {
-          let flagLength = flag.characters.count
+        for (i, c) in flag.enumerated() {
+          let flagLength = flag.count
           for option in _options {
             if String(c) == option.shortFlag {
               /* Values are allowed at the end of the concatenated flags, e.g.
@@ -219,7 +219,7 @@ open class CommandLine {
     var flagWidth = 0
     for opt in _options {
       flagWidth = max(flagWidth,
-        "  \(ShortOptionPrefix)\(opt.shortFlag), \(LongOptionPrefix)\(opt.longFlag):".characters.count)
+        "  \(ShortOptionPrefix)\(opt.shortFlag), \(LongOptionPrefix)\(opt.longFlag):".count)
     }
     
     print("Usage: \(name) [options]")

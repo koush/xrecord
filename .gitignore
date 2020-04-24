@@ -2,3 +2,5 @@
 *.xcbkptlist
 
 *.xcbkptlist
+xrecord.xcodeproj/
+.DS_Store
