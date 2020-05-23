@@ -26,9 +26,27 @@ override init() {
     // Enable screen capture devices in AV Foundation
     xRecord_Bridge.enableScreenCaptureDevices()
 }
-    
+
+func pollDevices() {
+    while true {
+        RunLoop.current.run(until: Date() + 1)
+        let discoverySession = AVCaptureDevice.DiscoverySession.init(deviceTypes: [AVCaptureDevice.DeviceType.externalUnknown], mediaType: nil, position: AVCaptureDevice.Position.unspecified);
+
+        print("---start")
+        let devices = discoverySession.devices
+        for object in devices {
+            let device = object
+            let deviceID = device.uniqueID
+            let deviceName = device.localizedName
+            print("\(deviceID): \(deviceName)")
+        }
+    }
+}
+
 func listDevices() {
-    let devices = getDevices();
+    let discoverySession = AVCaptureDevice.DiscoverySession.init(deviceTypes: [AVCaptureDevice.DeviceType.externalUnknown], mediaType: nil, position: AVCaptureDevice.Position.unspecified);
+
+    let devices = discoverySession.devices
     for object in devices {
         let device = object
         let deviceID = device.uniqueID
@@ -38,12 +56,14 @@ func listDevices() {
 }
     
 func getDevices() -> [AVCaptureDevice] {
+    RunLoop.current.run(until: Date() + 1)
+
     let discoverySession = AVCaptureDevice.DiscoverySession.init(deviceTypes: [AVCaptureDevice.DeviceType.externalUnknown], mediaType: nil, position: AVCaptureDevice.Position.unspecified);
     
-    sleep(1);
+    RunLoop.current.run(until: Date() + 1)
     return discoverySession.devices
 }
-  
+
 func setQuality(_ quality: String!) {
   if (quality == "low") {
     self.session.sessionPreset = AVCaptureSession.Preset.low;
@@ -129,14 +149,10 @@ func startRaw(_ file: String!) -> Bool {
             if let fh = FileHandle(forWritingAtPath: file) {
                 fileHandle = fh
                 if self.session.canAddOutput(self.rawOutput) {
-                    print("nsta")
                     self.session.addOutput(self.rawOutput)
                     self.session.startRunning()
                     started = true
                 }
-            }
-            else {
-                print("nop")
             }
         }
     }
@@ -150,7 +166,6 @@ func stop() {
 }
 
 func captureOutput(_ output: AVCaptureOutput, didDrop sampleBuffer: CMSampleBuffer, from connection: AVCaptureConnection) {
-    print("drop frame")
 }
 
 var firstPacket = true
@@ -159,16 +174,11 @@ func captureOutput(_ output: AVCaptureOutput, didOutput sampleBuffer: CMSampleBu
         firstPacket = false
         
         if let parm = sampleBuffer.formatDescription?.parameterSets  {
-            print("parm")
             for ps in parm {
-                print(ps.count)
                 let header = Data.init([0,0,0,1])
                 fileHandle.write(header)
                 fileHandle.write(ps)
             }
-        }
-        else {
-            print("no parm")
         }
     }
     
@@ -177,7 +187,6 @@ func captureOutput(_ output: AVCaptureOutput, didOutput sampleBuffer: CMSampleBu
             var offset: Int = 0
             while offset < db.count {
                 let len: UInt = (UInt(db[offset]) << 24) | (UInt(db[offset + 1]) << 16) | (UInt(db[offset + 2]) << 8) | UInt(db[offset + 3]);
-//                print(len)
                 db[offset] = 0
                 db[offset + 1] = 0
                 db[offset + 2] = 0
@@ -185,35 +194,10 @@ func captureOutput(_ output: AVCaptureOutput, didOutput sampleBuffer: CMSampleBu
                 offset += 4 + Int(len)
             }
             fileHandle.write(db)
-//            print("\(a0) \(a1) \(a2) \(a3)")
         }
     }
     catch {
-        print("wtf")
     }
-//    if let blockBuffer = CMSampleBufferGetDataBuffer(sampleBuffer) {
-//        var lengthAtOffset: Int = 0;
-//        var totalLength: size_t = 0;
-//        var data: UnsafeMutablePointer<Int8>! = nil
-//        CMBlockBufferGetDataPointer(blockBuffer, atOffset: 0, lengthAtOffsetOut: &lengthAtOffset, totalLengthOut: &totalLength, dataPointerOut: &data)
-//
-//        var videoData = Data.init(bytes: data, count: lengthAtOffset)
-//
-//        if lengthAtOffset != totalLength {
-//            print("whoops not \(lengthAtOffset) \(totalLength)")
-//        }
-//        else {
-//            let fmt = sampleBuffer.formatDescription
-//            print("\(lengthAtOffset)");
-////            let prefix = Data.init([0,0,0,1])
-////            fileHandle.write(prefix)
-//            videoData[0] = 0
-//            videoData[1] = 0
-//            videoData[2] = 0
-//            videoData[3] = 1
-//            fileHandle.write(videoData)
-//        }
-//    }
 }
 
 func fileOutput(_ output: AVCaptureFileOutput,

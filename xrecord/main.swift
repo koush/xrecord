@@ -32,7 +32,6 @@ fileprivate func > <T : Comparable>(lhs: T?, rhs: T?) -> Bool {
   }
 }
 
-
 let xRecord_Bridge: XRecord_Bridge = XRecord_Bridge();
 
 func quit(_ exitCode: Int32!) {
@@ -42,14 +41,22 @@ func quit(_ exitCode: Int32!) {
 
 let cli = CommandLine()
 
+let silent = BoolOption(shortFlag: "s", longFlag: "silent",
+    helpMessage: "Silent output.")
 let list = BoolOption(shortFlag: "l", longFlag: "list",
     helpMessage: "List available capture devices.")
+let poll = BoolOption(shortFlag: "p", longFlag: "poll",
+    helpMessage: "Poll available capture devices.")
+let execute = BoolOption(shortFlag: "e", longFlag: "exec",
+    helpMessage: "Execute without signal handler.")
 let name = StringOption(shortFlag: "n", longFlag: "name", required: false,
     helpMessage: "Device Name.")
 let id = StringOption(shortFlag: "i", longFlag: "id", required: false,
     helpMessage: "Device ID.")
 let outFile = StringOption(shortFlag: "o", longFlag: "out", required: false,
     helpMessage: "Output File.")
+let raw = BoolOption(shortFlag: "r", longFlag: "raw",
+    helpMessage: "Raw Output.")
 let force = BoolOption(shortFlag: "f", longFlag: "force",
     helpMessage: "Overwrite existing files.")
 let qt = BoolOption(shortFlag: "q", longFlag: "quicktime",
@@ -63,7 +70,7 @@ let debug = BoolOption(shortFlag: "d", longFlag: "debug",
 let help = BoolOption(shortFlag: "h", longFlag: "help",
     helpMessage: "Prints a help message.")
 
-cli.addOptions(list, name, id, outFile, force, qt, time, quality, debug, help)
+cli.addOptions(silent, poll, list, execute, name, id, outFile, raw, force, qt, time, quality, debug, help)
 let (success, error) = cli.parse()
 if !success {
   print(error!)
@@ -71,9 +78,15 @@ if !success {
   quit(EX_USAGE)
 }
 
+func sprint(_ s: String) {
+    if (!silent.value) {
+        print(s)
+    }
+}
+
 // Check to make sure a sane combination of options were specified
 var ok = true
-if !list.value {
+if !list.value && !poll.value {
   if name.value == nil && id.value == nil {
     ok = false
   }
@@ -100,7 +113,9 @@ if !debug.value {
   quit(proc.terminationStatus)
 }
 
-xRecord_Bridge.installSignalHandler(0)
+if (!execute.value) {
+    xRecord_Bridge.installSignalHandler(0)
+}
 
 // Use a distributed lock to make sure only one instance is capturing at a time.
 // Currently OSX only supports recording from a single device at a time.
@@ -115,8 +130,12 @@ if qt.value {
 }
 
 let capture = Capture()
+if (poll.value) {
+    capture.pollDevices()
+    quit(0)
+}
 if list.value {
-  print("Available capture devices:")
+  sprint("Available capture devices:")
   capture.listDevices()
   quit(0)
 }
@@ -138,7 +157,7 @@ if name.value != nil {
   }
 }
 if !connected {
-  print("Device not found")
+  sprint("Device not found")
   // kill quicktime in case it got wedged
   quit(1)
 }
@@ -153,28 +172,29 @@ if outFile.value != nil && FileManager.default.fileExists(atPath: outFile.value!
       error = error1
     }
     if (error != nil) {
-      print("Error overwriting existing file (\(error)).")
-      quit(2)
+      sprint("Error overwriting existing file (\(error)). Continuing...")
     }
   } else {
-    print("The output file already exists, please use a different file: \(outFile.value!)")
+    sprint("The output file already exists, please use a different file: \(outFile.value!)")
     quit(2)
   }
 }
 
 // Start a real capture
 if !done {
-  NSLog("Starting capture....")
-  capture.startRaw(outFile.value)
+  if raw.value {
+     capture.startRaw(outFile.value)
+  }
+  else {
+     capture.start(outFile.value)
+  }
 
   let start = Date()
   if time.value != nil && time.value > 0 {
-      print("Recording for \(time.value!) seconds.  Hit ctrl-C to stop.")
-      NSLog("Recording for \(time.value!) seconds.  Hit ctrl-C to stop.")
+      sprint("Recording for \(time.value!) seconds.  Hit ctrl-C to stop.")
       sleep(UInt32(time.value!))
   } else {
-      print("Recording started.  Hit ctrl-C to stop.")
-      NSLog("Recording started.  Hit ctrl-C to stop.")
+      sprint("Recording started.  Hit ctrl-C to stop.")
   }
 
   // Loop until we get a ctrl-C or the time limit expires
@@ -191,8 +211,7 @@ if !done {
       }
   } while !done
 
-  print("Stopping recording...")
-  NSLog("Stopping recording...")
+  sprint("Stopping recording...")
 
   capture.stop()
   if qt.value {
@@ -200,7 +219,6 @@ if !done {
   }
 }
 
-print("Done")
-NSLog("Done")
+sprint("Done")
 
 quit(0);
