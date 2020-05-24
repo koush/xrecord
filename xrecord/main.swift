@@ -70,6 +70,8 @@ let debug = BoolOption(shortFlag: "d", longFlag: "debug",
 let help = BoolOption(shortFlag: "h", longFlag: "help",
     helpMessage: "Prints a help message.")
 
+setbuf(__stdoutp, nil);
+
 cli.addOptions(silent, poll, list, execute, name, id, outFile, raw, force, qt, time, quality, debug, help)
 let (success, error) = cli.parse()
 if !success {

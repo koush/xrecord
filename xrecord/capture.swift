@@ -38,14 +38,18 @@ func pollDevices() {
             let device = object
             let deviceID = device.uniqueID
             let deviceName = device.localizedName
-            print("\(deviceID): \(deviceName)")
+            let deviceManufacturer = device.manufacturer
+            print("\(deviceID):\(deviceName):\(deviceManufacturer)")
         }
     }
 }
 
 func listDevices() {
+    RunLoop.current.run(until: Date() + 1)
+
     let discoverySession = AVCaptureDevice.DiscoverySession.init(deviceTypes: [AVCaptureDevice.DeviceType.externalUnknown], mediaType: nil, position: AVCaptureDevice.Position.unspecified);
 
+    RunLoop.current.run(until: Date() + 1)
     let devices = discoverySession.devices
     for object in devices {
         let device = object
@@ -140,10 +144,16 @@ func startRaw(_ file: String!) -> Bool {
     if let input = self.input {
         if self.session.canAddInput(input) {
             self.session.addInput(input)
-            let queue = DispatchQueue.init(label: "test")
+            let queue = DispatchQueue.init(label: "test", qos: DispatchQoS.userInteractive)
             self.rawOutput = AVCaptureVideoDataOutput()
             self.rawOutput.setSampleBufferDelegate(self, queue: queue)
-            self.rawOutput.videoSettings = [AVVideoCodecKey:AVVideoCodecType.h264]
+//            let compression: NSDictionary = [AVVideoAverageBitRateKey:10000,
+//            ]
+            self.rawOutput.videoSettings = [AVVideoCodecKey:AVVideoCodecType.h264,
+            AVVideoWidthKey:1088 / 2,
+            AVVideoHeightKey:1920 / 2,
+//            AVVideoCompressionPropertiesKey:compression,
+            ]
 //            self.rawOutput.videoSettings[AVVideoCodecKey] = AVVideoCodecType.h264
             FileManager.default.createFile(atPath: file, contents: nil);
             if let fh = FileHandle(forWritingAtPath: file) {
@@ -173,27 +183,33 @@ func captureOutput(_ output: AVCaptureOutput, didOutput sampleBuffer: CMSampleBu
     if (firstPacket) {
         firstPacket = false
         
-        if let parm = sampleBuffer.formatDescription?.parameterSets  {
-            for ps in parm {
-                let header = Data.init([0,0,0,1])
+        if let fd = sampleBuffer.formatDescription {
+            print("\(fd.dimensions.width)x\(fd.dimensions.height)")
+
+            for ps in fd.parameterSets {
+//                let header = Data.init([0,0,0,1])
+                let header = Data.init([0, 0, 0, UInt8(ps.count)])
                 fileHandle.write(header)
                 fileHandle.write(ps)
+                fsync(fileHandle.fileDescriptor)
             }
         }
     }
-    
+
     do {
         if var db = try sampleBuffer.dataBuffer?.dataBytes() {
-            var offset: Int = 0
-            while offset < db.count {
-                let len: UInt = (UInt(db[offset]) << 24) | (UInt(db[offset + 1]) << 16) | (UInt(db[offset + 2]) << 8) | UInt(db[offset + 3]);
-                db[offset] = 0
-                db[offset + 1] = 0
-                db[offset + 2] = 0
-                db[offset + 3] = 1
-                offset += 4 + Int(len)
-            }
+            // rewrites from avcc to annex b
+//            var offset: Int = 0
+//            while offset < db.count {
+//                let len: UInt = (UInt(db[offset]) << 24) | (UInt(db[offset + 1]) << 16) | (UInt(db[offset + 2]) << 8) | UInt(db[offset + 3]);
+//                db[offset] = 0
+//                db[offset + 1] = 0
+//                db[offset + 2] = 0
+//                db[offset + 3] = 1
+//                offset += 4 + Int(len)
+//            }
             fileHandle.write(db)
+            fsync(fileHandle.fileDescriptor)
         }
     }
     catch {
@@ -203,11 +219,9 @@ func captureOutput(_ output: AVCaptureOutput, didOutput sampleBuffer: CMSampleBu
 func fileOutput(_ output: AVCaptureFileOutput,
     didStartRecordingTo fileURL: URL,
     from connections: [AVCaptureConnection]) {
-   NSLog("captureOutput Started callback");
-   self.started = true
+    self.started = true
 }
 func fileOutput(_ output: AVCaptureFileOutput, didFinishRecordingTo outputFileURL: URL, from connections: [AVCaptureConnection], error: Error?) {
-    NSLog("captureOutput Finished callback")
     self.finished = true
 }
 
