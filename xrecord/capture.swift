@@ -144,17 +144,15 @@ func startRaw(_ file: String!) -> Bool {
     if let input = self.input {
         if self.session.canAddInput(input) {
             self.session.addInput(input)
-            let queue = DispatchQueue.init(label: "test", qos: DispatchQoS.userInteractive)
+            let queue = DispatchQueue.init(label: "test")
             self.rawOutput = AVCaptureVideoDataOutput()
             self.rawOutput.setSampleBufferDelegate(self, queue: queue)
-//            let compression: NSDictionary = [AVVideoAverageBitRateKey:10000,
+            self.rawOutput.videoSettings = [kCVPixelBufferPixelFormatTypeKey as String:kCVPixelFormatType_420YpCbCr8BiPlanarVideoRange]
+//            self.rawOutput.videoSettings = [
+//                AVVideoCodecKey:AVVideoCodecType.h264,
+//                AVVideoWidthKey:1088 / 2,
+//                AVVideoHeightKey:1920 / 2,
 //            ]
-            self.rawOutput.videoSettings = [AVVideoCodecKey:AVVideoCodecType.h264,
-            AVVideoWidthKey:1088 / 2,
-            AVVideoHeightKey:1920 / 2,
-//            AVVideoCompressionPropertiesKey:compression,
-            ]
-//            self.rawOutput.videoSettings[AVVideoCodecKey] = AVVideoCodecType.h264
             FileManager.default.createFile(atPath: file, contents: nil);
             if let fh = FileHandle(forWritingAtPath: file) {
                 fileHandle = fh
@@ -197,7 +195,14 @@ func captureOutput(_ output: AVCaptureOutput, didOutput sampleBuffer: CMSampleBu
     }
 
     do {
-        if var db = try sampleBuffer.dataBuffer?.dataBytes() {
+        if let ib = sampleBuffer.imageBuffer {
+            let pb = ib as CVPixelBuffer
+            CVPixelBufferLockBaseAddress(pb, CVPixelBufferLockFlags.readOnly)
+            let address = CVPixelBufferGetBaseAddressOfPlane(pb, 1)
+            print(address)
+            CVPixelBufferUnlockBaseAddress(pb, CVPixelBufferLockFlags.readOnly)
+        }
+        if let db = try sampleBuffer.dataBuffer?.dataBytes() {
             // rewrites from avcc to annex b
 //            var offset: Int = 0
 //            while offset < db.count {
