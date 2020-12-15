@@ -142,12 +142,13 @@ func start(_ file: String!) -> Bool {
 func startRaw(_ file: String!) -> Bool {
     var started : Bool = false
     if let input = self.input {
+        print("\(input.device.activeFormat)")
         if self.session.canAddInput(input) {
             self.session.addInput(input)
             let queue = DispatchQueue.init(label: "test")
             self.rawOutput = AVCaptureVideoDataOutput()
             self.rawOutput.setSampleBufferDelegate(self, queue: queue)
-            self.rawOutput.videoSettings = [kCVPixelBufferPixelFormatTypeKey as String:kCVPixelFormatType_420YpCbCr8BiPlanarVideoRange]
+            self.rawOutput.videoSettings = [kCVPixelBufferPixelFormatTypeKey as String:kCVPixelFormatType_24RGB]
 //            self.rawOutput.videoSettings = [
 //                AVVideoCodecKey:AVVideoCodecType.h264,
 //                AVVideoWidthKey:1088 / 2,
@@ -174,35 +175,48 @@ func stop() {
 }
 
 func captureOutput(_ output: AVCaptureOutput, didDrop sampleBuffer: CMSampleBuffer, from connection: AVCaptureConnection) {
+    print("droppy\n")
 }
 
 var firstPacket = true
+var frameCount = 0
 func captureOutput(_ output: AVCaptureOutput, didOutput sampleBuffer: CMSampleBuffer, from connection: AVCaptureConnection) {
-    if (firstPacket) {
-        firstPacket = false
-        
-        if let fd = sampleBuffer.formatDescription {
-            print("\(fd.dimensions.width)x\(fd.dimensions.height)")
-
-            for ps in fd.parameterSets {
-//                let header = Data.init([0,0,0,1])
-                let header = Data.init([0, 0, 0, UInt8(ps.count)])
-                fileHandle.write(header)
-                fileHandle.write(ps)
-                fsync(fileHandle.fileDescriptor)
-            }
-        }
-    }
-
     do {
         if let ib = sampleBuffer.imageBuffer {
             let pb = ib as CVPixelBuffer
             CVPixelBufferLockBaseAddress(pb, CVPixelBufferLockFlags.readOnly)
-            let address = CVPixelBufferGetBaseAddressOfPlane(pb, 1)
-            print(address)
+            if let address = CVPixelBufferGetBaseAddress(pb) {
+                let size = CVPixelBufferGetDataSize(pb)
+
+                if (firstPacket) {
+                    firstPacket = false
+                    
+                    if let fd = sampleBuffer.formatDescription {
+                        let planeCount = CVPixelBufferGetPlaneCount(pb)
+                        print("\(fd.dimensions.width),\(fd.dimensions.height),\(size),\(planeCount)")
+                        for plane in 0..<planeCount {
+                            let bpr = CVPixelBufferGetBytesPerRowOfPlane(pb, plane)
+                            let pw = CVPixelBufferGetWidthOfPlane(pb, plane)
+                            let ph = CVPixelBufferGetHeightOfPlane(pb, plane)
+                            print("\(pw),\(ph),\(bpr)")
+                        }
+
+                        for ps in fd.parameterSets {
+                            let header = Data.init([0, 0, 0, UInt8(ps.count)])
+                            fileHandle.write(header)
+                            fileHandle.write(ps)
+                            fsync(fileHandle.fileDescriptor)
+                        }
+                    }
+                }
+
+                
+                write(fileHandle.fileDescriptor, address, size)
+                fsync(fileHandle.fileDescriptor)
+            }
             CVPixelBufferUnlockBaseAddress(pb, CVPixelBufferLockFlags.readOnly)
         }
-        if let db = try sampleBuffer.dataBuffer?.dataBytes() {
+//        if let db = try sampleBuffer.dataBuffer?.dataBytes() {
             // rewrites from avcc to annex b
 //            var offset: Int = 0
 //            while offset < db.count {
@@ -213,9 +227,9 @@ func captureOutput(_ output: AVCaptureOutput, didOutput sampleBuffer: CMSampleBu
 //                db[offset + 3] = 1
 //                offset += 4 + Int(len)
 //            }
-            fileHandle.write(db)
-            fsync(fileHandle.fileDescriptor)
-        }
+//            fileHandle.write(db)
+//            fsync(fileHandle.fileDescriptor)
+//        }
     }
     catch {
     }

@@ -66,7 +66,7 @@ open class CommandLine {
     var skipFlagChecks = false
     
     /* Grab attached arg, if any */
-    var attachedArg = _arguments[flagIndex].splitByCharacter(ArgumentAttacher, maxSplits: 1)
+    let attachedArg = _arguments[flagIndex].splitByCharacter(ArgumentAttacher, maxSplits: 1)
     if attachedArg.count > 1 {
       args.append(attachedArg[1])
     }

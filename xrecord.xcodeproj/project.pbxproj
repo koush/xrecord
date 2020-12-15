@@ -14,17 +14,19 @@
 		0FB963A81A38C2C700EC40AE /* Option.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0FB963A51A38C2C700EC40AE /* Option.swift */; };
 		0FB963A91A38C2C700EC40AE /* StringExtensions.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0FB963A61A38C2C700EC40AE /* StringExtensions.swift */; };
 		9AE269B81CABF509008D8F75 /* PluginHeaderHelper.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 9AE269B61CABF509008D8F75 /* PluginHeaderHelper.cpp */; };
+		E21F91E224804168005AE6D4 /* Info.plist in CopyFiles */ = {isa = PBXBuildFile; fileRef = E21F91E124804078005AE6D4 /* Info.plist */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXCopyFilesBuildPhase section */
 		0FB963971A38C13000EC40AE /* CopyFiles */ = {
 			isa = PBXCopyFilesBuildPhase;
-			buildActionMask = 8;
-			dstPath = /usr/share/man/man1/;
-			dstSubfolderSpec = 0;
+			buildActionMask = 12;
+			dstPath = "";
+			dstSubfolderSpec = 16;
 			files = (
+				E21F91E224804168005AE6D4 /* Info.plist in CopyFiles */,
 			);
-			runOnlyForDeploymentPostprocessing = 1;
+			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXCopyFilesBuildPhase section */
 
@@ -42,6 +44,7 @@
 		9AE269B51CABF509008D8F75 /* PluginHeaderHelper.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = PluginHeaderHelper.h; sourceTree = "<group>"; };
 		9AE269B61CABF509008D8F75 /* PluginHeaderHelper.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = PluginHeaderHelper.cpp; sourceTree = "<group>"; };
 		9AE269B71CABF509008D8F75 /* PluginHeader.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = PluginHeader.h; sourceTree = "<group>"; };
+		E21F91E124804078005AE6D4 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -58,6 +61,7 @@
 		0FB963901A38C13000EC40AE = {
 			isa = PBXGroup;
 			children = (
+				E21F91E124804078005AE6D4 /* Info.plist */,
 				0FB9639B1A38C13000EC40AE /* xrecord */,
 				0FB9639A1A38C13000EC40AE /* Products */,
 			);
@@ -253,6 +257,8 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				CLANG_ENABLE_MODULES = YES;
+				CODE_SIGN_IDENTITY = "-";
+				INFOPLIST_FILE = "$(SRCROOT)/Info.plist";
 				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/../Frameworks @loader_path/../Frameworks";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_OBJC_BRIDGING_HEADER = "xrecord/xrecord-Bridging-Header.h";
@@ -265,6 +271,8 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				CLANG_ENABLE_MODULES = YES;
+				CODE_SIGN_IDENTITY = "-";
+				INFOPLIST_FILE = "$(SRCROOT)/Info.plist";
 				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/../Frameworks @loader_path/../Frameworks";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_OBJC_BRIDGING_HEADER = "xrecord/xrecord-Bridging-Header.h";
