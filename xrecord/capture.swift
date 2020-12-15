@@ -142,13 +142,14 @@ func start(_ file: String!) -> Bool {
 func startRaw(_ file: String!) -> Bool {
     var started : Bool = false
     if let input = self.input {
-        print("\(input.device.activeFormat)")
         if self.session.canAddInput(input) {
             self.session.addInput(input)
             let queue = DispatchQueue.init(label: "test")
             self.rawOutput = AVCaptureVideoDataOutput()
             self.rawOutput.setSampleBufferDelegate(self, queue: queue)
-            self.rawOutput.videoSettings = [kCVPixelBufferPixelFormatTypeKey as String:kCVPixelFormatType_24RGB]
+            self.rawOutput.videoSettings = [:]
+//            self.rawOutput.videoSettings = [kCVPixelBufferPixelFormatTypeKey as String:kCVPixelFormatType_420YpCbCr8Planar]
+//            self.rawOutput.videoSettings = [kCVPixelBufferPixelFormatTypeKey as String:kCVPixelFormatType_24RGB]
 //            self.rawOutput.videoSettings = [
 //                AVVideoCodecKey:AVVideoCodecType.h264,
 //                AVVideoWidthKey:1088 / 2,
@@ -175,7 +176,6 @@ func stop() {
 }
 
 func captureOutput(_ output: AVCaptureOutput, didDrop sampleBuffer: CMSampleBuffer, from connection: AVCaptureConnection) {
-    print("droppy\n")
 }
 
 var firstPacket = true
@@ -210,26 +210,59 @@ func captureOutput(_ output: AVCaptureOutput, didOutput sampleBuffer: CMSampleBu
                     }
                 }
 
-                
-                write(fileHandle.fileDescriptor, address, size)
+                let y = CVPixelBufferGetBaseAddressOfPlane(pb, 0)!
+//                let u = CVPixelBufferGetBaseAddressOfPlane(pb, 1)!
+//                let v = CVPixelBufferGetBaseAddressOfPlane(pb, 2)!
+
+                // there's some padding.
+                let d0 = address.distance(to: y)
+//                let d1 = y.distance(to: u)
+//                let d2 = u.distance(to: v)
+
+                let length = CFSwapInt32HostToBig(UInt32(size - d0))
+                withUnsafeBytes(of: length) {
+                    write(fileHandle.fileDescriptor, $0.baseAddress, MemoryLayout.size(ofValue: length))
+                }
+                write(fileHandle.fileDescriptor, y, size - d0)
+//                print("frame \(frameCount)")
+                frameCount += 1
                 fsync(fileHandle.fileDescriptor)
             }
             CVPixelBufferUnlockBaseAddress(pb, CVPixelBufferLockFlags.readOnly)
         }
-//        if let db = try sampleBuffer.dataBuffer?.dataBytes() {
-            // rewrites from avcc to annex b
-//            var offset: Int = 0
-//            while offset < db.count {
-//                let len: UInt = (UInt(db[offset]) << 24) | (UInt(db[offset + 1]) << 16) | (UInt(db[offset + 2]) << 8) | UInt(db[offset + 3]);
-//                db[offset] = 0
-//                db[offset + 1] = 0
-//                db[offset + 2] = 0
-//                db[offset + 3] = 1
-//                offset += 4 + Int(len)
-//            }
-//            fileHandle.write(db)
-//            fsync(fileHandle.fileDescriptor)
-//        }
+        else {
+            if let db = try sampleBuffer.dataBuffer?.dataBytes() {
+                if (firstPacket) {
+                    firstPacket = false
+                    if let fd = sampleBuffer.formatDescription {
+                        print("\(fd.dimensions.width),\(fd.dimensions.height),0,0")
+                    }
+                    
+                    for (ps) in sampleBuffer.formatDescription!.parameterSets {
+//                        print(ps)
+                        let length = CFSwapInt32HostToBig(UInt32(ps.count))
+                        withUnsafeBytes(of: length) {
+                            write(fileHandle.fileDescriptor, $0.baseAddress, MemoryLayout.size(ofValue: length))
+                        }
+                        fileHandle.write(ps)
+                    }
+                }
+
+//                var offset: Int = 0
+//                while offset < db.count {
+//                    let len: UInt = (UInt(db[offset]) << 24) | (UInt(db[offset + 1]) << 16) | (UInt(db[offset + 2]) << 8) | UInt(db[offset + 3]);
+//                    // rewrites from avcc to annex b
+////                    db[offset] = 0
+////                    db[offset + 1] = 0
+////                    db[offset + 2] = 0
+////                    db[offset + 3] = 1
+//                    offset += 4 + Int(len)
+//                }
+//                let size = sampleBuffer.dataBuffer?.dataLength
+                fileHandle.write(db)
+                fsync(fileHandle.fileDescriptor)
+            }
+        }
     }
     catch {
     }
