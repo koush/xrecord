@@ -240,9 +240,27 @@ func captureOutput(_ output: AVCaptureOutput, didOutput sampleBuffer: CMSampleBu
                     
                     for (ps) in sampleBuffer.formatDescription!.parameterSets {
 //                        print(ps)
-                        let length = CFSwapInt32HostToBig(UInt32(ps.count))
+
+                        let length = CFSwapInt32HostToBig(UInt32(8 + 4 + ps.count))
                         withUnsafeBytes(of: length) {
                             write(fileHandle.fileDescriptor, $0.baseAddress, MemoryLayout.size(ofValue: length))
+                        }
+                        
+                        if let fd = sampleBuffer.formatDescription {
+                            let width = CFSwapInt32HostToBig(UInt32(fd.dimensions.width))
+                            let height = CFSwapInt32HostToBig(UInt32(fd.dimensions.height))
+
+                            withUnsafeBytes(of: width) {
+                                write(fileHandle.fileDescriptor, $0.baseAddress, MemoryLayout.size(ofValue: width))
+                            }
+                            withUnsafeBytes(of: height) {
+                                write(fileHandle.fileDescriptor, $0.baseAddress, MemoryLayout.size(ofValue: height))
+                            }
+                        }
+
+                        let avc0001 = CFSwapInt32HostToBig(1)
+                        withUnsafeBytes(of: avc0001) {
+                            write(fileHandle.fileDescriptor, $0.baseAddress, MemoryLayout.size(ofValue: avc0001))
                         }
                         fileHandle.write(ps)
                     }
@@ -259,6 +277,25 @@ func captureOutput(_ output: AVCaptureOutput, didOutput sampleBuffer: CMSampleBu
 //                    offset += 4 + Int(len)
 //                }
 //                let size = sampleBuffer.dataBuffer?.dataLength
+
+                
+                let length = CFSwapInt32HostToBig(UInt32(8 + db.count))
+                withUnsafeBytes(of: length) {
+                    write(fileHandle.fileDescriptor, $0.baseAddress, MemoryLayout.size(ofValue: length))
+                }
+                
+                if let fd = sampleBuffer.formatDescription {
+                    let width = CFSwapInt32HostToBig(UInt32(fd.dimensions.width))
+                    let height = CFSwapInt32HostToBig(UInt32(fd.dimensions.height))
+
+                    withUnsafeBytes(of: width) {
+                        write(fileHandle.fileDescriptor, $0.baseAddress, MemoryLayout.size(ofValue: width))
+                    }
+                    withUnsafeBytes(of: height) {
+                        write(fileHandle.fileDescriptor, $0.baseAddress, MemoryLayout.size(ofValue: height))
+                    }
+                }
+                    
                 fileHandle.write(db)
                 fsync(fileHandle.fileDescriptor)
             }
