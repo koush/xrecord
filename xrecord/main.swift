@@ -8,6 +8,9 @@
 
 import Foundation
 import AVFoundation
+import Cocoa
+
+
 // FIXME: comparison operators with optionals were removed from the Swift Standard Libary.
 // Consider refactoring the code to use the non-optional operators.
 fileprivate func < <T : Comparable>(lhs: T?, rhs: T?) -> Bool {
@@ -198,6 +201,8 @@ if !done {
   } else {
       sprint("Recording started.  Hit ctrl-C to stop.")
   }
+    
+    NSApplication.shared.run()
 
   // Loop until we get a ctrl-C or the time limit expires
   repeat {
